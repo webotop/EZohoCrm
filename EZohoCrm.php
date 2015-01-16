@@ -17,11 +17,10 @@
  * Extension was improved by
  * @author: Dmitry Kulikov <kulikovdn@gmail.com>
  *
- * TODO some static methods can be moved to new class EZohoCrmUtils
- *
  * TODO use classes of exceptions instead of error codes
  *
- * TODO need to improve error handling, checkResponseOnMultipleRecordsRequest must be executed automatically
+ * TODO need to improve error handling, checkResponseOnMultipleRecordsRequest and
+ * TODO fixOrderInResponseOnMultipleRecordsRequest must be executed automatically
  *
  * TODO documentation
  *
@@ -45,9 +44,14 @@ namespace ext\EZohoCrm;
 class EZohoCrm
 {
     /**
-     * Maximum number of records which can be created / updated in one API call.
+     * Auth token request url constant.
      */
-    const MAX_RECORDS_INSERT_UPDATE = 100;
+    const AUTH_TOKEN_REQUEST_URL = 'https://accounts.zoho.com/apiauthtoken/nb/create';
+
+    /**
+     * Base url constant.
+     */
+    const BASE_URL = 'https://crm.zoho.com/crm/private/json/';
 
     /**
      * Maximum number of records which can be retrieved in one getRecords API call.
@@ -55,40 +59,91 @@ class EZohoCrm
     const MAX_RECORDS_GET_RECORDS = 200;
 
     /**
-     * Auth Token
-     * An authentication token is required in order to be able to make use of the Zoho CRM
-     * API. An authentication token can be obtained by using the generateAuthToken
-     * function inside this class or by using the url
-     * https://accounts.zoho.com/apiauthtoken/create?SCOPE=ZohoCRM/crmapi while being
-     * logged in in Zoho CRM. You could hardcode the authToken, obtain it from a config
-     * file or obtain it from a database in the line below.
+     * Maximum number of records which can be created / updated in one API call.
+     */
+    const MAX_RECORDS_INSERT_UPDATE = 100;
+
+    /**
+     * Module constants.
+     */
+    const MODULE_ACCOUNTS = 'Accounts';
+    const MODULE_CALLS = 'Calls';
+    const MODULE_CAMPAIGNS = 'Campaigns';
+    const MODULE_CASES = 'Cases';
+    const MODULE_COMPETITORS = 'Competitors';
+    const MODULE_CONTACTS = 'Contacts';
+    const MODULE_DASHBOARDS = 'Dashboards';
+    const MODULE_EMAILS = 'Emails';
+    const MODULE_EVENTS = 'Events';
+    const MODULE_FORECASTS = 'Forecasts';
+    const MODULE_INFO = 'Info';
+    const MODULE_INTEGRATIONS = 'Integrations';
+    const MODULE_INVOICES = 'Invoices';
+    const MODULE_LEADS = 'Leads';
+    const MODULE_POTENTIALS = 'Potentials';
+    const MODULE_PRICE_BOOKS = 'PriceBooks';
+    const MODULE_PRODUCTS = 'Products';
+    const MODULE_PURCHASE_ORDERS = 'PurchaseOrders';
+    const MODULE_QUOTES = 'Quotes';
+    const MODULE_REPORTS = 'Reports';
+    const MODULE_SALES_ORDERS = 'SalesOrders';
+    const MODULE_SOLUTIONS = 'Solutions';
+    const MODULE_TASKS = 'Tasks';
+    const MODULE_USERS = 'Users';
+    const MODULE_VENDORS = 'Vendors';
+
+    /**
+     * Parameter constants.
+     * These constants are used when calling methods in the API.
+     */
+    const ALL_COLUMNS = 'All';
+    const SORT_ORDER_ASC = 'asc';
+    const SORT_ORDER_DESC = 'desc';
+
+    /**
+     * Scope constants.
+     */
+    const SCOPE = 'crmapi';
+    const SCOPE_AUTH_TOKEN_REQUEST = 'ZohoCRM/crmapi';
+    const VERSION = 2;
+
+    /**
+     * User type constants.
+     */
+    const USER_TYPE_ACTIVE_CONFIRMED_ADMINS = 'ActiveConfirmedAdmins';
+    const USER_TYPE_ACTIVE_USERS = 'ActiveUsers';
+    const USER_TYPE_ADMIN_USERS = 'AdminUsers';
+    const USER_TYPE_ALL_USERS = 'AllUsers';
+    const USER_TYPE_DEACTIVE_USERS = 'DeactiveUsers';
+
+    /**
+     * An authentication token is required in order to be able to make use of the Zoho CRM API.
+     * An authentication token can be obtained by using the generateAuthToken function inside this class
+     * or by using the url https://accounts.zoho.com/apiauthtoken/create?SCOPE=ZohoCRM/crmapi while being
+     * logged in in Zoho CRM. You could hardcode the authToken, obtain it from a config file or from a database.
      * @var string
      */
     public $authToken = null;
 
     /**
-     * Module
      * Defines the module which you want to use within the application.
      * @var string
      */
     public $module;
 
     /**
-     * Print
      * Defines whether print or return result of API call, defaults to false.
      * @var boolean
      */
     public $print = false;
 
     /**
-     * Timeout
-     * Timeout for EHttpClient requests in seconds, defaults to 30 seconds.
+     * Timeout for \EHttpClient requests in seconds, defaults to 30 seconds.
      * @var integer
      */
     public $timeout = 30;
 
     /**
-     * Max Attempts
      * Maximum number of attempts to send request. If this number is greater than 1
      * then request will be automatically repeated in case of connection timeout up to reaching of Max Attempts value.
      * @var integer
@@ -96,28 +151,24 @@ class EZohoCrm
     public $maxAttempts = 1;
 
     /**
-     * Attempts Count
      * Number of already performed attempts to send request.
      * @var integer
      */
     public $attemptsCount = 1;
 
     /**
-     * Sleep Time
      * Time in seconds between attempts to send request in case of connection timeout.
      * @var integer
      */
     public $sleepTime = 1;
 
     /**
-     * Debug
      * Enable debug mode, extension logs all requests to Zoho CRM API in debug mode.
-     * @var bool
+     * @var boolean
      */
     public $debug = YII_DEBUG;
 
     /**
-     * Curl Options
      * Option for a cURL transfer.
      * @var array
      */
@@ -140,70 +191,7 @@ class EZohoCrm
     public $afterApiCall = null;
 
     /**
-     * MODULE constants
-     */
-    const MODULE_ACCOUNTS = 'Accounts';
-    const MODULE_CALLS = 'Calls';
-    const MODULE_CAMPAIGNS = 'Campaigns';
-    const MODULE_CASES = 'Cases';
-    const MODULE_COMPETITORS = 'Competitors';
-    const MODULE_CONTACTS = 'Contacts';
-    const MODULE_DASHBOARDS = 'Dashboards';
-    const MODULE_EMAILS = 'Emails';
-    const MODULE_EVENTS = 'Events';
-    const MODULE_FORECASTS = 'Forecasts';
-    const MODULE_INFO = 'Info';
-    const MODULE_INTEGRATIONS = 'Integrations';
-    const MODULE_INVOICES = 'Invoices';
-    const MODULE_LEADS = 'Leads';
-    const MODULE_POTENTIALS = 'Potentials';
-    const MODULE_PRICE_BOOKS = 'PriceBooks';
-    const MODULE_PRODUCTS = 'Products';
-    const MODULE_PURCHASE_ORDERS = 'PurchaseOrders';
-    const MODULE_QUOTES = 'Quotes';
-    const MODULE_REPORTS = 'Reports';
-    const MODULE_SOLUTIONS = 'Solutions';
-    const MODULE_SALES_ORDERS = 'SalesOrders';
-    const MODULE_TASKS = 'Tasks';
-    const MODULE_USERS = 'Users';
-    const MODULE_VENDORS = 'Vendors';
-
-    /**
-     * USER_TYPE constants
-     */
-    const USER_TYPE_ALL_USERS = 'AllUsers';
-    const USER_TYPE_ACTIVE_USERS = 'ActiveUsers';
-    const USER_TYPE_DEACTIVE_USERS = 'DeactiveUsers';
-    const USER_TYPE_ADMIN_USERS = 'AdminUsers';
-    const USER_TYPE_ACTIVE_CONFIRMED_ADMINS = 'ActiveConfirmedAdmins';
-
-    /**
-     * SCOPE constants
-     */
-    const SCOPE = 'crmapi';
-    const SCOPE_AUTH_TOKEN_REQUEST = 'ZohoCRM/crmapi';
-    const VERSION = 2;
-
-    /**
-     * BASE_URL constant
-     */
-    const BASE_URL = 'https://crm.zoho.com/crm/private/json/';
-
-    /**
-     * AUTH TOKEN REQUEST URL constant
-     */
-    const AUTH_TOKEN_REQUEST_URL = 'https://accounts.zoho.com/apiauthtoken/nb/create';
-
-    /**
-     * Parameter constants
-     * These constants are used when calling methods in the API.
-     */
-    const ALL_COLUMNS = 'All';
-    const SORT_ORDER_ASC = 'asc';
-    const SORT_ORDER_DESC = 'desc';
-
-    /**
-     * Constructor
+     * Constructor.
      * @param array $configArray use it to override default values for variables
      */
     public function __construct($configArray = null)
@@ -323,7 +311,6 @@ class EZohoCrm
     }
 
     /**
-     * requestRecursive
      * @param \EHttpClient $client
      * @return mixed
      * @throws EZohoCrmException
@@ -362,7 +349,6 @@ class EZohoCrm
     }
 
     /**
-     * processGetRequestParameters
      * @param \EHttpClient $client
      * @param $getParameters
      * @return mixed
@@ -388,7 +374,6 @@ class EZohoCrm
     }
 
     /**
-     * processPostRequestParameters
      * @param \EHttpClient $client
      * @param null $postParameters
      * @param null $postBody
@@ -419,7 +404,6 @@ class EZohoCrm
     }
 
     /**
-     * preprocessResponse
      * Preprocess response before return to main application. If you want to add your own processing it is good idea
      * to override this method.
      * @param $response
@@ -431,7 +415,6 @@ class EZohoCrm
     }
 
     /**
-     * getPath
      * Get path for Zoho CRM API request.
      * @param string $function name of function
      * @param null|string $module name of module
@@ -447,9 +430,8 @@ class EZohoCrm
     }
 
     /**
-     * getBoolean
      * Returns a string for the given boolean.
-     * @param $boolean
+     * @param boolean $boolean
      * @return string
      */
     protected static function getBoolean($boolean)
@@ -458,7 +440,6 @@ class EZohoCrm
     }
 
     /**
-     * getNewFormat
      * New format is an integer and can be either 1 or 2. 1 means that null values are excluded, 2 means the opposite.
      * @param $excludeNull
      * @return integer
@@ -469,10 +450,9 @@ class EZohoCrm
     }
 
     /**
-     * getSelectColumns
      * Returns a string indicating which columns should be returned based on the selectColumns input variable.
-     * @param $selectColumns
-     * @return string
+     * @param array $selectColumns array of columns which should be returned
+     * @return string string of columns which should be returned.
      */
     protected function getSelectColumns($selectColumns)
     {
@@ -484,7 +464,6 @@ class EZohoCrm
     }
 
     /**
-     * convertLead
      * You can use this method to convert lead to potential, account and contact.
      * @link https://www.zoho.com/crm/help/api/convertlead.html
      * @param $leadId
@@ -498,7 +477,7 @@ class EZohoCrm
      * @param null $contactRole
      * @param null $amount
      * @param null $probability
-     * @param bool $excludeNull
+     * @param boolean $excludeNull
      * @param integer $version
      * @return mixed
      * @throws \Exception
@@ -571,7 +550,6 @@ class EZohoCrm
     }
 
     /**
-     * deleteRecords
      * You can use this method to delete the selected record (you must specify unique ID
      * of the record) and move to the recycle bin.
      * @link https://www.zoho.com/crm/help/api/deleterecords.html
@@ -589,7 +567,6 @@ class EZohoCrm
     }
 
     /**
-     * generateAuthToken
      * The Zoho CRM API is available in all editions of Zoho CRM. To use the API, you'll
      * require the Zoho CRM Authentication Token from your CRM account. Please make sure
      * that you have the permission to access the API service. If you do not have
@@ -614,7 +591,6 @@ class EZohoCrm
     }
 
     /**
-     * getCVRecords
      * You can use the getCVRecords method to fetch data with respect to the Custom View in Zoho CRM.
      * IMPORTANT: Irrespective of the Zoho CRM Edition, you can send only 250 API requests / day.
      * In each request you can fetch a maximum of 200 records.
@@ -623,7 +599,7 @@ class EZohoCrm
      * @param integer $fromIndex
      * @param integer $toIndex
      * @param null|string $lastModifiedTime
-     * @param bool $excludeNull
+     * @param boolean $excludeNull
      * @param integer $version
      * @return mixed
      * @throws \Exception
@@ -652,7 +628,6 @@ class EZohoCrm
     }
 
     /**
-     * getFields
      * You can use the getFields method to fetch details of the fields available in a particular module.
      * @link https://www.zoho.com/crm/help/api/getfields.html
      * @return mixed
@@ -666,7 +641,6 @@ class EZohoCrm
     }
 
     /**
-     * getModules
      * You can use the getModules method to get the list of modules in your CRM account.
      * @link https://www.zoho.com/crm/help/api/getmodules.html
      * @return mixed
@@ -680,7 +654,6 @@ class EZohoCrm
     }
 
     /**
-     * getMyRecords
      * You can use the getMyRecords method to fetch data by the owner of the
      * Authentication token specified in the API request.
      * @link https://www.zoho.com/crm/help/api/getmyrecords.html
@@ -690,7 +663,7 @@ class EZohoCrm
      * @param null $sortColumnString
      * @param string $sortOrderString
      * @param null|string $lastModifiedTime
-     * @param bool $excludeNull
+     * @param boolean $excludeNull
      * @param integer $version
      * @return mixed
      */
@@ -718,11 +691,10 @@ class EZohoCrm
     }
 
     /**
-     * getRecordById
      * You can use this method to retrieve individual records by record ID.
      * @link https://www.zoho.com/crm/help/api/getrecordbyid.html
      * @param $id
-     * @param bool $excludeNull
+     * @param boolean $excludeNull
      * @param integer $version
      * @return mixed
      * @throws \Exception
@@ -741,7 +713,6 @@ class EZohoCrm
     }
 
     /**
-     * getRecords
      * You can use the getRecords method to fetch all users data specified in the API request.
      * @link https://www.zoho.com/crm/help/api/getrecords.html
      * @param array $columns
@@ -750,9 +721,9 @@ class EZohoCrm
      * @param null|string $sortColumnString
      * @param string $sortOrderString
      * @param null|string $lastModifiedTime
-     * @param bool $excludeNull
+     * @param boolean $excludeNull
      * @param integer $version
-     * @param bool $myRecords
+     * @param boolean $myRecords
      * @return mixed
      * @throws \Exception
      */
@@ -784,7 +755,6 @@ class EZohoCrm
     }
 
     /**
-     * getAllRecords
      * You can use the getAllRecords method to fetch all users data specified in the API request.
      * getAllRecords unlike getRecords was designed to load all records in module and thus you can't specify
      * paging and sorting parameters for getAllRecords: fromIndex, toIndex, sortColumnString, sortOrderString.
@@ -796,9 +766,9 @@ class EZohoCrm
      * it will return null, if module contains a lot of records it makes sense to process records page by page
      * using callback and do not store thousands of records in array because it may require a lot of memory
      * @param null|string $lastModifiedTime
-     * @param bool $excludeNull
+     * @param boolean $excludeNull
      * @param integer $version
-     * @param bool $myRecords
+     * @param boolean $myRecords
      * @return mixed
      * @throws \Exception
      */
@@ -851,12 +821,11 @@ class EZohoCrm
     }
 
     /**
-     * getRelatedRecords
      * You can use the getRelatedRecords method to fetch related records.
      * @link https://www.zoho.com/crm/help/api/getrelatedrecords.html
      * @param $parentModule
      * @param $id
-     * @param bool $excludeNull
+     * @param boolean $excludeNull
      * @param integer $fromIndex
      * @param integer $toIndex
      * @return mixed
@@ -887,12 +856,11 @@ class EZohoCrm
     }
 
     /**
-     * getSearchRecords
      * You can use this method to search records by expressions of the selected columns.
      * @link https://www.zoho.com/crm/help/api/getsearchrecords.html
      * @param array $selectColumns columns which should be selected, use empty array to select all
      * @param $searchCondition
-     * @param bool $excludeNull
+     * @param boolean $excludeNull
      * @param integer $fromIndex
      * @param integer $toIndex
      * @param integer $version
@@ -923,12 +891,11 @@ class EZohoCrm
     }
 
     /**
-     * searchRecords
      * You can use the searchRecords method to get the list of records that meet your search criteria.
      * @link https://www.zoho.com/crm/help/api/searchrecords.html
      * @param array $selectColumns columns which should be selected, use empty array to select all
      * @param string $criteria
-     * @param bool $excludeNull
+     * @param boolean $excludeNull
      * @param integer $fromIndex
      * @param integer $toIndex
      * @param null|string $lastModifiedTime
@@ -960,13 +927,12 @@ class EZohoCrm
     }
 
     /**
-     * getSearchRecordsByPDC
      * You can use this method to search the values based on predefined columns.
      * @link https://www.zoho.com/crm/help/api/getsearchrecordsbypdc.html
      * @param array $selectColumns columns which should be selected, use empty array to select all
      * @param $searchColumn
      * @param $searchValue
-     * @param bool $excludeNull
+     * @param boolean $excludeNull
      * @param integer $version
      * @return mixed
      * @throws \Exception
@@ -992,11 +958,10 @@ class EZohoCrm
     }
 
     /**
-     * getUsers
      * You can use the getUsers method to get the list of users in your organization.
      * @link https://www.zoho.com/crm/help/api/getusers.html
      * @param $type
-     * @param bool $excludeNull
+     * @param boolean $excludeNull
      * @return mixed
      * @throws \Exception
      */
@@ -1013,7 +978,6 @@ class EZohoCrm
     }
 
     /**
-     * downloadFile
      * You can use this method to download files from CRM to your system.
      * @link https://www.zoho.com/crm/help/api/downloadfile.html
      * @param $id
@@ -1030,14 +994,13 @@ class EZohoCrm
     }
 
     /**
-     * insertRecords
      * You can use the insertRecords method to insert records into the required Zoho CRM module.
      * @link https://www.zoho.com/crm/help/api/insertrecords.html
      * @param $records
-     * @param bool $wfTrigger
+     * @param boolean $wfTrigger
      * @param integer $duplicateCheck
-     * @param bool $isApproval
-     * @param bool $excludeNull
+     * @param boolean $isApproval
+     * @param boolean $excludeNull
      * @param integer $version
      * @return mixed
      * @throws \Exception
@@ -1068,13 +1031,12 @@ class EZohoCrm
     }
 
     /**
-     * updateRecords
      * You can use the updateRecords method to update or modify the records in Zoho CRM.
      * @link https://www.zoho.com/crm/help/api/updaterecords.html
      * @param $id
      * @param $records
-     * @param bool $wfTrigger
-     * @param bool $excludeNull
+     * @param boolean $wfTrigger
+     * @param boolean $excludeNull
      * @param integer $version
      * @return mixed
      * @throws \Exception
@@ -1097,7 +1059,6 @@ class EZohoCrm
     }
 
     /**
-     * updateRelatedRecords
      * You can use the updateRelatedRecords method to update records related to another record.
      * @link https://www.zoho.com/crm/help/api/updaterelatedrecords.html
      * @param $relatedModule
@@ -1120,7 +1081,6 @@ class EZohoCrm
     }
 
     /**
-     * transformRecordsToXmlData
      * Transform one or multiple records to XML Data. This function can, for example, be
      * used to format an array of Leads to XML Data in order to make the data ready for
      * the insertRecords function.
@@ -1169,7 +1129,6 @@ class EZohoCrm
     }
 
     /**
-     * getEscapedValue
      * Returns the escaped value which can be used in the xmlData parameter.
      * @param $value
      * @param $method
@@ -1196,7 +1155,6 @@ class EZohoCrm
     }
 
     /**
-     * printResponse
      * Print response.
      * @param $response
      */
@@ -1208,7 +1166,6 @@ class EZohoCrm
     }
 
     /**
-     * checkResponseOnMultipleRecordsRequest
      * You can use this method to check response on multiple records requests like multiple insertRecords or
      * updateRecords.
      * @param mixed $response response from Zoho CRM API
@@ -1233,7 +1190,6 @@ class EZohoCrm
     }
 
     /**
-     * fixOrderInResponseOnMultipleRecordsRequest
      * Order of rows in response of Zoho CRM API may differ from order of rows in request, this method fixes it.
      * @param mixed $response response from Zoho CRM API
      * @return mixed $response response from Zoho CRM API with reordered rows.
@@ -1253,7 +1209,6 @@ class EZohoCrm
     }
 
     /**
-     * rowToArray
      * This method needed to make response of Zoho CRM API more consequent: API calls containing "row" return data
      * with different structure depending on number of items, there is difference between response with one item and
      * with many items, this methods makes response unified.
@@ -1277,7 +1232,6 @@ class EZohoCrm
     }
 
     /**
-     * getRowFieldValue
      * Get value of field of row in response on multiple records request.
      * @param \stdClass $row row in response on multiple records request
      * @param string $fieldName field name
@@ -1296,7 +1250,6 @@ class EZohoCrm
     }
 
     /**
-     * getSystemIdFieldName
      * @param null|string $module
      * @return string
      * @throws EZohoCrmException
