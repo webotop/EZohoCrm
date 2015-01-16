@@ -17,13 +17,13 @@
  * Extension was improved by
  * @author: Dmitry Kulikov <kulikovdn@gmail.com>
  *
+ * TODO some static methods can be moved to new class EZohoCrmUtils
+ *
  * TODO need to improve error handling, checkResponseOnMultipleRecordsRequest must be executed automatically
  *
  * TODO documentation
  *
  * TODO use Yii::t for translation
- *
- * TODO some methods should be declared static
  *
  * TODO unit tests
  *
@@ -265,7 +265,7 @@ class EZohoCrm
         }
 
         if ($this->print) {
-            $this->printResponse($json);
+            static::printResponse($json);
 
             return null;
         } else {
@@ -450,7 +450,7 @@ class EZohoCrm
      * @param $boolean
      * @return string
      */
-    protected function getBoolean($boolean)
+    protected static function getBoolean($boolean)
     {
         return $boolean ? 'true' : 'false';
     }
@@ -520,10 +520,10 @@ class EZohoCrm
         $this->module = static::MODULE_POTENTIALS;
 
         $rowNo1 = array(
-            'createPotential' => $this->getBoolean($createPotential),
+            'createPotential' => static::getBoolean($createPotential),
             'assignTo' => (string)$assignTo,
-            'notifyLeadOwner' => $this->getBoolean($notifyLeadOwner),
-            'notifyNewEntityOwner' => $this->getBoolean($notifyNewEntityOwner),
+            'notifyLeadOwner' => static::getBoolean($notifyLeadOwner),
+            'notifyNewEntityOwner' => static::getBoolean($notifyNewEntityOwner),
         );
 
         if ($closingDate instanceof \DateTime) {
@@ -1156,7 +1156,7 @@ class EZohoCrm
         foreach ($records as $record) {
             $xml .= '<row no="' . $rowNumber++ . '">';
             foreach ($record as $key => $value) {
-                $value = $this->getEscapedValue($value, $method);
+                $value = static::getEscapedValue($value, $method);
                 $xml .= '<FL val="' . $key . '">' . $value . '</FL>';
             }
             $xml .= '</row>';
@@ -1174,7 +1174,7 @@ class EZohoCrm
      * @return string
      * @throws EZohoCrmException
      */
-    protected function getEscapedValue($value, $method)
+    protected static function getEscapedValue($value, $method)
     {
         switch ($method) {
             case \EHttpClient::GET:
@@ -1198,7 +1198,7 @@ class EZohoCrm
      * Print response.
      * @param $response
      */
-    protected function printResponse($response)
+    protected static function printResponse($response)
     {
         echo '<pre>';
         print_r($response);
