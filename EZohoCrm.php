@@ -122,13 +122,17 @@ class EZohoCrm
     public $curlOptions = array();
 
     /**
-     * Callback function which will be executed before sending of request to Zoho CRM API.
+     * Callback function which will be executed before sending of request to Zoho CRM API; callback will receive
+     * $path, $method, $getParameters, $postParameters, $postBody, $bodyEncodingType; all arguments passed by reference;
+     * result of execution of this function will be passed to $afterApiCall (if this callback specified).
      * @var null|callable
      */
     public $beforeApiCall = null;
 
     /**
-     * Callback function which will be executed after sending of request to Zoho CRM API.
+     * Callback function which will be executed after sending of request to Zoho CRM API; callback will receive
+     * $response, $beforeApiCallResult; $response passed by reference, $beforeApiCallResult passed by value;
+     * if $beforeApiCall callback is not specified then $beforeApiCallResult will be null.
      * @var null|callable
      */
     public $afterApiCall = null;
@@ -225,18 +229,6 @@ class EZohoCrm
         }
     }
 
-    public function getSystemIdFieldName($module = null)
-    {
-        if (!isset($module)) {
-            $module = $this->module;
-        }
-        if (empty($module)) {
-            throw new EZohoCrmException("Module name can't be empty.", EZohoCrmException::MODULE_NOT_SUPPORTED);
-        }
-
-        return strtoupper($module) . '_ID';
-    }
-
     protected function zohoCrmApiCall(
         $path,
         $method = \EHttpClient::GET,
@@ -246,40 +238,13 @@ class EZohoCrm
         $bodyEncodingType = null,
         $rawFile = false
     ) {
-        $adapter = new \EHttpClientAdapterCurl();
+        $response = $this->request($path, $method, $getParameters, $postParameters, $postBody, $bodyEncodingType);
 
-        $client = new \EHttpClient(
-            $path,
-            array(
-                'maxredirects' => 2,
-                'timeout' => $this->timeout,
-                'adapter' => 'EHttpClientAdapterCurl',
-            )
-        );
-
-        $client->setMethod($method);
-
-        $client = $this->setGetRequestParameters($client, $getParameters);
-        $client = $this->setPostRequestParameters($client, $postParameters, $postBody, $bodyEncodingType);
-
-        $client->setAdapter($adapter);
-        $adapter->setConfig(array('curloptions' => $this->curlOptions));
-        if ($this->debug) {
-            \Yii::log(
-                "Sending of request to Zoho CRM API:\n" . EUtils::printVarDump($client, true),
-                'info',
-                'ext.eZohoCrm'
-            );
-        }
-
-        $this->attemptsCount = 0;
-
-        $request =  $this->request($client, $path, $getParameters, $postParameters);
         if ($rawFile) {
-            return $request;
+            return $response;
         }
 
-        $json = $this->request($client)->getBody();
+        $json = $response->getBody();
         $decodedResponse = json_decode($json);
         $jsonLastError = EUtils::getJsonLastError();
         if (isset($jsonLastError)) {
@@ -294,7 +259,7 @@ class EZohoCrm
         if (isset($decodedResponse->response->error)) {
             throw new EZohoCrmException(
                 'Error ' . $decodedResponse->response->error->code . ': ' . $decodedResponse->response->error->message .
-                    ' Uri was "' . $decodedResponse->response->uri . '".',
+                ' Uri was "' . $decodedResponse->response->uri . '".',
                 EZohoCrmException::ZOHO_CRM_RESPONSE_ERROR
             );
         }
@@ -309,13 +274,98 @@ class EZohoCrm
         }
     }
 
+    protected function request($path, $method, $getParameters, $postParameters, $postBody, $bodyEncodingType)
+    {
+        $beforeApiCallResult = null;
+        if (is_callable($this->beforeApiCall)) {
+            $beforeApiCallResult = call_user_func_array(
+                $this->beforeApiCall,
+                array(&$path, &$method, &$getParameters, &$postParameters, &$postBody, &$bodyEncodingType)
+            );
+        }
+
+        $client = new \EHttpClient(
+            $path,
+            array(
+                'maxredirects' => 2,
+                'timeout' => $this->timeout,
+                'adapter' => 'EHttpClientAdapterCurl',
+            )
+        );
+
+        $client->setMethod($method);
+
+        $this->processGetRequestParameters($client, $getParameters);
+        $this->processPostRequestParameters($client, $postParameters, $postBody, $bodyEncodingType);
+
+        $adapter = new \EHttpClientAdapterCurl();
+        $client->setAdapter($adapter);
+        $adapter->setConfig(array('curloptions' => $this->curlOptions));
+        if ($this->debug) {
+            \Yii::log(
+                "Sending of request to Zoho CRM API:\n" . EUtils::printVarDump($client, true),
+                'info',
+                'ext.eZohoCrm'
+            );
+        }
+
+        $this->attemptsCount = 0;
+
+        $response = $this->requestRecursive($client);
+
+        if (is_callable($this->afterApiCall)) {
+            call_user_func_array($this->afterApiCall, array(&$response, $beforeApiCallResult));
+        }
+
+        return $response;
+    }
+
     /**
-     * setGetRequestParameters
+     * requestRecursive
      * @param \EHttpClient $client
-     * @param null $getParameters
+     * @return mixed
+     * @throws EZohoCrmException
+     * @throws \EHttpClientException
+     * @throws \Exception
+     */
+    protected function requestRecursive($client)
+    {
+        try {
+            $this->attemptsCount++;
+            $response = $client->request();
+        } catch (\EHttpClientException $e) {
+            if ($this->maxAttempts == 1 || strpos(strtolower($e->getMessage()), 'timed out') === false) {
+                // repeating of requests disabled or not timed out error
+                throw $e;
+            }
+            \Yii::log(
+                "exception 'EHttpClientException' with message '{$e->getMessage()}'" .
+                " in {$e->getFile()}:{$e->getLine()}\nStack trace:\n" . $e->getTraceAsString(),
+                'error',
+                'exception.EHttpClientException'
+            );
+            if ($this->attemptsCount < $this->maxAttempts) {
+                sleep($this->sleepTime);
+                $response = $this->requestRecursive($client);
+            } else {
+                throw new EZohoCrmException(
+                    "Can't perform request after {$this->attemptsCount} attempts " .
+                    "with {$this->sleepTime} second(s) intervals.",
+                    EZohoCrmException::RETRY_ATTEMPTS_LIMIT
+                );
+            }
+        }
+
+        return $response;
+    }
+
+    /**
+     * processGetRequestParameters
+     * @param \EHttpClient $client
+     * @param $getParameters
      * @return mixed
      */
-    protected function setGetRequestParameters($client, $getParameters)
+    protected function processGetRequestParameters(&$client, $getParameters)
     {
         $defaultGetParameters = array('scope' => static::SCOPE);
 
@@ -333,19 +383,17 @@ class EZohoCrm
             $getParameters = $defaultGetParameters;
         }
         $client->setParameterGet($getParameters);
-
-        return $client;
     }
 
     /**
-     * setPostRequestParameters
+     * processPostRequestParameters
      * @param \EHttpClient $client
      * @param null $postParameters
      * @param null $postBody
      * @param null $bodyEncodingType
      * @return mixed
      */
-    protected function setPostRequestParameters($client, $postParameters, $postBody, $bodyEncodingType)
+    protected function processPostRequestParameters(&$client, $postParameters, $postBody, $bodyEncodingType)
     {
         // POST parameters
         if (!empty($postParameters)) {
@@ -360,14 +408,12 @@ class EZohoCrm
         if (!empty($postParameters) && !empty($postBody)) {
             \Yii::log(
                 'Attempt to send POST parameters and POST data. ' .
-                    "Setting raw POST data for a request will override any POST parameters or file uploads.\n" .
-                    EUtils::printVarDump($client, true),
+                "Setting raw POST data for a request will override any POST parameters or file uploads.\n" .
+                EUtils::printVarDump($client, true),
                 'warning',
                 'ext.eZohoCrm'
             );
         }
-
-        return $client;
     }
 
     /**
@@ -380,66 +426,6 @@ class EZohoCrm
     protected function preprocessResponse($response)
     {
         return $this->rowToArray($response);
-    }
-
-    /**
-     * request
-     * @param \EHttpClient $client
-     * @return mixed
-     * @throws \EHttpClientException
-     * @throws \Exception
-     */
-    protected function request($client,$path=null,$getParameters=null,$postParameters=null)
-    {
-        $id = null;
-        if (is_callable($this->beforeApiCall)) {
-            $id = call_user_func_array($this->beforeApiCall, array($path, $getParameters, $postParameters));
-        }
-
-        $response = $this->requestRecursive($client);
-
-        if (is_callable($this->afterApiCall)) {
-            call_user_func_array($this->afterApiCall, array($id, $response));
-        }
-
-        return $response;
-    }
-
-    /**
-     * @param \EHttpClient $client
-     * @return mixed
-     * @throws \EHttpClientException
-     * @throws \Exception
-     */
-    protected function requestRecursive($client)
-    {
-        try {
-            $this->attemptsCount++;
-            $response = $client->request();
-        } catch (\EHttpClientException $e) {
-            if ($this->maxAttempts == 1 || strpos(strtolower($e->getMessage()), 'timed out') === false) {
-                // repeating of requests disabled or not timed out error
-                throw $e;
-            }
-            \Yii::log(
-                "exception 'EHttpClientException' with message '{$e->getMessage()}'" .
-                    " in {$e->getFile()}:{$e->getLine()}\nStack trace:\n" . $e->getTraceAsString(),
-                'error',
-                'exception.EHttpClientException'
-            );
-            if ($this->attemptsCount < $this->maxAttempts) {
-                sleep($this->sleepTime);
-                $response = $this->request($client);
-            } else {
-                throw new EZohoCrmException(
-                    "Can't perform request after {$this->attemptsCount} attempts " .
-                        "with {$this->sleepTime} second(s) intervals.",
-                    EZohoCrmException::RETRY_ATTEMPTS_LIMIT
-                );
-            }
-        }
-
-        return $response;
     }
 
     /**
@@ -456,6 +442,43 @@ class EZohoCrm
         }
 
         return static::BASE_URL . $module . '/' . $function;
+    }
+
+    /**
+     * getBoolean
+     * Returns a string for the given boolean.
+     * @param $boolean
+     * @return string
+     */
+    protected function getBoolean($boolean)
+    {
+        return $boolean ? 'true' : 'false';
+    }
+
+    /**
+     * getNewFormat
+     * New format is an integer and can be either 1 or 2. 1 means that null values are excluded, 2 means the opposite.
+     * @param $excludeNull
+     * @return integer
+     */
+    protected static function getNewFormat($excludeNull)
+    {
+        return $excludeNull ? 1 : 2;
+    }
+
+    /**
+     * getSelectColumns
+     * Returns a string indicating which columns should be returned based on the selectColumns input variable.
+     * @param $selectColumns
+     * @return string
+     */
+    protected function getSelectColumns($selectColumns)
+    {
+        if ($selectColumns === array()) {
+            return static::ALL_COLUMNS;
+        } else {
+            return $this->module . '(' . implode(',', $selectColumns) . ')';
+        }
     }
 
     /**
@@ -558,7 +581,7 @@ class EZohoCrm
     {
         $path = $this->getPath(__FUNCTION__);
 
-        $getParameters = array('id' => $id);
+        $getParameters = array('id' => (string)$id);
 
         return $this->zohoCrmApiCall($path, \EHttpClient::GET, $getParameters);
     }
@@ -586,17 +609,6 @@ class EZohoCrm
         );
 
         return $this->zohoCrmApiCall($path, \EHttpClient::GET, $getParameters);
-    }
-
-    /**
-     * getBoolean
-     * Returns a string for the given boolean.
-     * @param $boolean
-     * @return string
-     */
-    protected function getBoolean($boolean)
-    {
-        return $boolean ? 'true' : 'false';
     }
 
     /**
@@ -635,33 +647,6 @@ class EZohoCrm
         );
 
         return $this->zohoCrmApiCall($path, \EHttpClient::GET, $getParameters);
-    }
-
-    /**
-     * getEscapedValue
-     * Returns the escaped value which can be used in the xmlData parameter.
-     * @param $value
-     * @param $method
-     * @return string
-     * @throws EZohoCrmException
-     */
-    protected function getEscapedValue($value, $method)
-    {
-        switch ($method) {
-            case \EHttpClient::GET:
-                $value = '<![CDATA[' . htmlentities($value) . ']]>';
-                break;
-            case \EHttpClient::POST:
-                $value = '<![CDATA[' . $value . ']]>';
-                break;
-            default:
-                throw new EZohoCrmException(
-                    "Unknown HTTP request method $method.",
-                    EZohoCrmException::UNKNOWN_HTTP_METHOD
-                );
-        }
-
-        return $value;
     }
 
     /**
@@ -728,17 +713,6 @@ class EZohoCrm
             $version,
             true
         );
-    }
-
-    /**
-     * getNewFormat
-     * New format is an integer and can be either 1 or 2. 1 means that null values are excluded, 2 means the opposite.
-     * @param $excludeNull
-     * @return integer
-     */
-    protected static function getNewFormat($excludeNull)
-    {
-        return $excludeNull ? 1 : 2;
     }
 
     /**
@@ -815,7 +789,7 @@ class EZohoCrm
      * @link https://www.zoho.com/crm/help/api/getrecords.html
      * @param array $columns
      * @param null|callable $callback callback function which will be executed after receiving of each page
-     * with records; callback will receive $rows and $page arguments, both passed by reference
+     * with records; callback will receive $rows and $page arguments; all arguments passed by reference
      * @param boolean $return if this parameter is set to true, function will return array of records otherwise
      * it will return null, if module contains a lot of records it makes sense to process records page by page
      * using callback and do not store thousands of records in array because it may require a lot of memory
@@ -1016,21 +990,6 @@ class EZohoCrm
     }
 
     /**
-     * getSelectColumns
-     * Returns a string indicating which columns should be returned based on the selectColumns input variable.
-     * @param $selectColumns
-     * @return string
-     */
-    protected function getSelectColumns($selectColumns)
-    {
-        if ($selectColumns === array()) {
-            return static::ALL_COLUMNS;
-        } else {
-            return $this->module . '(' . implode(',', $selectColumns) . ')';
-        }
-    }
-
-    /**
      * getUsers
      * You can use the getUsers method to get the list of users in your organization.
      * @link https://www.zoho.com/crm/help/api/getusers.html
@@ -1049,6 +1008,23 @@ class EZohoCrm
         );
 
         return $this->zohoCrmApiCall($path, \EHttpClient::GET, $getParameters);
+    }
+
+    /**
+     * downloadFile
+     * You can use this method to download files from CRM to your system.
+     * @link https://www.zoho.com/crm/help/api/downloadfile.html
+     * @param $id
+     * @return mixed
+     * @throws \Exception
+     */
+    public function downloadFile($id)
+    {
+        $path = $this->getPath(__FUNCTION__);
+
+        $getParameters = array('id' => (string)$id);
+
+        return $this->zohoCrmApiCall($path, \EHttpClient::GET, $getParameters, null, null, null, true);
     }
 
     /**
@@ -1087,55 +1063,6 @@ class EZohoCrm
         $postParameters = array('xmlData' => $this->transformRecordsToXmlData($records, \EHttpClient::POST));
 
         return $this->zohoCrmApiCall($path, \EHttpClient::POST, $getParameters, $postParameters);
-    }
-
-    /**
-     * transformRecordsToXmlData
-     * Transform one or multiple records to XML Data. This function can, for example, be
-     * used to format an array of Leads to XML Data in order to make the data ready for
-     * the insertRecords function.
-     * @param $records
-     * @param $method
-     * @return string
-     * @throws \Exception
-     */
-    public function transformRecordsToXmlData($records, $method)
-    {
-        $modulesNotSupportedForMultipleInserts = array(
-            static::MODULE_QUOTES,
-            static::MODULE_SALES_ORDERS,
-            static::MODULE_INVOICES,
-            static::MODULE_PURCHASE_ORDERS
-        );
-
-        if (count($records) > 1 && in_array($this->module, $modulesNotSupportedForMultipleInserts)) {
-            throw new EZohoCrmException(
-                "Module $this->module does not support multiple inserts.",
-                EZohoCrmException::MODULE_NOT_SUPPORTED
-            );
-        }
-
-        if (count($records) > static::MAX_RECORDS_INSERT_UPDATE) {
-            throw new EZohoCrmException(
-                'Only the first ' . static::MAX_RECORDS_INSERT_UPDATE .
-                    ' records will be considered when inserting multiple records.',
-                EZohoCrmException::RECORDS_INSERT_UPDATE_LIMIT
-            );
-        }
-
-        $xml = '<' . $this->module . '>';
-        $rowNumber = 1;
-        foreach ($records as $record) {
-            $xml .= '<row no="' . $rowNumber++ . '">';
-            foreach ($record as $key => $value) {
-                $value = $this->getEscapedValue($value, $method);
-                $xml .= '<FL val="' . $key . '">' . $value . '</FL>';
-            }
-            $xml .= '</row>';
-        }
-        $xml .= '</' . $this->module . '>';
-
-        return $xml;
     }
 
     /**
@@ -1191,6 +1118,82 @@ class EZohoCrm
     }
 
     /**
+     * transformRecordsToXmlData
+     * Transform one or multiple records to XML Data. This function can, for example, be
+     * used to format an array of Leads to XML Data in order to make the data ready for
+     * the insertRecords function.
+     * @param $records
+     * @param $method
+     * @return string
+     * @throws \Exception
+     */
+    public function transformRecordsToXmlData($records, $method)
+    {
+        $modulesNotSupportedForMultipleInserts = array(
+            static::MODULE_QUOTES,
+            static::MODULE_SALES_ORDERS,
+            static::MODULE_INVOICES,
+            static::MODULE_PURCHASE_ORDERS
+        );
+
+        if (count($records) > 1 && in_array($this->module, $modulesNotSupportedForMultipleInserts)) {
+            throw new EZohoCrmException(
+                "Module $this->module does not support multiple inserts.",
+                EZohoCrmException::MODULE_NOT_SUPPORTED
+            );
+        }
+
+        if (count($records) > static::MAX_RECORDS_INSERT_UPDATE) {
+            throw new EZohoCrmException(
+                'Only the first ' . static::MAX_RECORDS_INSERT_UPDATE .
+                ' records will be considered when inserting multiple records.',
+                EZohoCrmException::RECORDS_INSERT_UPDATE_LIMIT
+            );
+        }
+
+        $xml = '<' . $this->module . '>';
+        $rowNumber = 1;
+        foreach ($records as $record) {
+            $xml .= '<row no="' . $rowNumber++ . '">';
+            foreach ($record as $key => $value) {
+                $value = $this->getEscapedValue($value, $method);
+                $xml .= '<FL val="' . $key . '">' . $value . '</FL>';
+            }
+            $xml .= '</row>';
+        }
+        $xml .= '</' . $this->module . '>';
+
+        return $xml;
+    }
+
+    /**
+     * getEscapedValue
+     * Returns the escaped value which can be used in the xmlData parameter.
+     * @param $value
+     * @param $method
+     * @return string
+     * @throws EZohoCrmException
+     */
+    protected function getEscapedValue($value, $method)
+    {
+        switch ($method) {
+            case \EHttpClient::GET:
+                $value = '<![CDATA[' . htmlentities($value) . ']]>';
+                break;
+            case \EHttpClient::POST:
+                $value = '<![CDATA[' . $value . ']]>';
+                break;
+            default:
+                throw new EZohoCrmException(
+                    "Unknown HTTP request method $method.",
+                    EZohoCrmException::UNKNOWN_HTTP_METHOD
+                );
+        }
+
+        return $value;
+    }
+
+    /**
      * printResponse
      * Print response.
      * @param $response
@@ -1221,7 +1224,7 @@ class EZohoCrm
         if (!empty($errorMessage)) {
             throw new EZohoCrmException(
                 $errorMessage . "\nUri was \"{$response->response->uri}\".\n" . "Records data:\n" .
-                    EUtils::printVarDump($records, true),
+                EUtils::printVarDump($records, true),
                 EZohoCrmException::ZOHO_CRM_RESPONSE_ERROR
             );
         }
@@ -1291,21 +1294,20 @@ class EZohoCrm
     }
 
     /**
-     * downloadFile
-     * You can use this method to file attached to records by file ID.
-     * @link https://www.zoho.com/crm/help/api/downloadfile.html
-     * @param $id
-     * @return mixed
-     * @throws \Exception
+     * getSystemIdFieldName
+     * @param null|string $module
+     * @return string
+     * @throws EZohoCrmException
      */
-    public function downloadFile($id)
+    public function getSystemIdFieldName($module = null)
     {
-        $path = static::BASE_URL . $this->module . '/' . __FUNCTION__;
+        if (!isset($module)) {
+            $module = $this->module;
+        }
+        if (empty($module)) {
+            throw new EZohoCrmException("Module name can't be empty.", EZohoCrmException::MODULE_NOT_SUPPORTED);
+        }
 
-        $getParameters = array(
-            'id' => (string)$id,
-        );
-
-        return $this->zohoCrmApiCall($path, \EHttpClient::GET, $getParameters, null, null, null, true);
+        return strtoupper($module) . '_ID';
     }
 }
