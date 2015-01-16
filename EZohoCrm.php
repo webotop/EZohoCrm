@@ -19,6 +19,8 @@
  *
  * TODO some static methods can be moved to new class EZohoCrmUtils
  *
+ * TODO use classes of exceptions instead of error codes
+ *
  * TODO need to improve error handling, checkResponseOnMultipleRecordsRequest must be executed automatically
  *
  * TODO documentation
