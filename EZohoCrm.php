@@ -192,7 +192,7 @@ class EZohoCrm
 
     /**
      * Constructor.
-     * @param array $configArray use it to override default values for variables
+     * @param null|array $configArray use it to override default values for variables
      */
     public function __construct($configArray = null)
     {
@@ -219,6 +219,19 @@ class EZohoCrm
         }
     }
 
+    /**
+     * @param $path
+     * @param string $method
+     * @param null $getParameters
+     * @param null $postParameters
+     * @param null $postBody
+     * @param null $bodyEncodingType
+     * @param bool $rawFile
+     * @return mixed
+     * @throws exceptions\ZohoCrmInvalidJson
+     * @throws exceptions\ZohoCrmInvalidResponse
+     * @throws exceptions\ZohoCrmResponseError
+     */
     protected function zohoCrmApiCall(
         $path,
         $method = \EHttpClient::GET,
@@ -238,19 +251,17 @@ class EZohoCrm
         $decodedResponse = json_decode($json);
         $jsonLastError = EUtils::getJsonLastError();
         if (isset($jsonLastError)) {
-            throw new EZohoCrmException("Invalid JSON: $jsonLastError.", EZohoCrmException::ZOHO_CRM_INVALID_JSON);
+            throw new exceptions\ZohoCrmInvalidJson("Invalid JSON: $jsonLastError.");
         }
         if (!is_object($decodedResponse)) {
-            throw new EZohoCrmException(
-                "Object expected as decoded response, but got\n" . EUtils::printVarDump($decodedResponse, true),
-                EZohoCrmException::ZOHO_CRM_INVALID_RESPONSE
+            throw new exceptions\ZohoCrmInvalidResponse(
+                "Object expected as decoded response, but got\n" . EUtils::printVarDump($decodedResponse, true)
             );
         }
         if (isset($decodedResponse->response->error)) {
-            throw new EZohoCrmException(
+            throw new exceptions\ZohoCrmResponseError(
                 'Error ' . $decodedResponse->response->error->code . ': ' . $decodedResponse->response->error->message .
-                ' Uri was "' . $decodedResponse->response->uri . '".',
-                EZohoCrmException::ZOHO_CRM_RESPONSE_ERROR
+                ' Uri was "' . $decodedResponse->response->uri . '".'
             );
         }
 
@@ -264,6 +275,18 @@ class EZohoCrm
         }
     }
 
+    /**
+     * @param $path
+     * @param $method
+     * @param $getParameters
+     * @param $postParameters
+     * @param $postBody
+     * @param $bodyEncodingType
+     * @return mixed
+     * @throws \EHttpClientException
+     * @throws \Exception
+     * @throws exceptions\RetryAttemptsLimit
+     */
     protected function request($path, $method, $getParameters, $postParameters, $postBody, $bodyEncodingType)
     {
         $beforeApiCallResult = null;
@@ -313,9 +336,9 @@ class EZohoCrm
     /**
      * @param \EHttpClient $client
      * @return mixed
-     * @throws EZohoCrmException
      * @throws \EHttpClientException
      * @throws \Exception
+     * @throws exceptions\RetryAttemptsLimit
      */
     protected function requestRecursive($client)
     {
@@ -337,10 +360,9 @@ class EZohoCrm
                 sleep($this->sleepTime);
                 $response = $this->requestRecursive($client);
             } else {
-                throw new EZohoCrmException(
+                throw new exceptions\RetryAttemptsLimit(
                     "Can't perform request after {$this->attemptsCount} attempts " .
-                    "with {$this->sleepTime} second(s) intervals.",
-                    EZohoCrmException::RETRY_ATTEMPTS_LIMIT
+                    "with {$this->sleepTime} second(s) intervals."
                 );
             }
         }
@@ -351,7 +373,6 @@ class EZohoCrm
     /**
      * @param \EHttpClient $client
      * @param $getParameters
-     * @return mixed
      */
     protected function processGetRequestParameters(&$client, $getParameters)
     {
@@ -378,7 +399,6 @@ class EZohoCrm
      * @param null $postParameters
      * @param null $postBody
      * @param null $bodyEncodingType
-     * @return mixed
      */
     protected function processPostRequestParameters(&$client, $postParameters, $postBody, $bodyEncodingType)
     {
@@ -480,7 +500,9 @@ class EZohoCrm
      * @param boolean $excludeNull
      * @param integer $version
      * @return mixed
-     * @throws \Exception
+     * @throws exceptions\ZohoCrmInvalidJson
+     * @throws exceptions\ZohoCrmInvalidResponse
+     * @throws exceptions\ZohoCrmResponseError
      */
     public function convertLead(
         $leadId,
@@ -555,7 +577,9 @@ class EZohoCrm
      * @link https://www.zoho.com/crm/help/api/deleterecords.html
      * @param $id
      * @return mixed
-     * @throws \Exception
+     * @throws exceptions\ZohoCrmInvalidJson
+     * @throws exceptions\ZohoCrmInvalidResponse
+     * @throws exceptions\ZohoCrmResponseError
      */
     public function deleteRecords($id)
     {
@@ -575,7 +599,9 @@ class EZohoCrm
      * @param $usernameOrEmail
      * @param $password
      * @return string
-     * @throws \Exception
+     * @throws exceptions\ZohoCrmInvalidJson
+     * @throws exceptions\ZohoCrmInvalidResponse
+     * @throws exceptions\ZohoCrmResponseError
      */
     public function generateAuthToken($usernameOrEmail, $password)
     {
@@ -602,7 +628,9 @@ class EZohoCrm
      * @param boolean $excludeNull
      * @param integer $version
      * @return mixed
-     * @throws \Exception
+     * @throws exceptions\ZohoCrmInvalidJson
+     * @throws exceptions\ZohoCrmInvalidResponse
+     * @throws exceptions\ZohoCrmResponseError
      * @deprecated
      */
     public function getCVRecords(
@@ -631,7 +659,9 @@ class EZohoCrm
      * You can use the getFields method to fetch details of the fields available in a particular module.
      * @link https://www.zoho.com/crm/help/api/getfields.html
      * @return mixed
-     * @throws \Exception
+     * @throws exceptions\ZohoCrmInvalidJson
+     * @throws exceptions\ZohoCrmInvalidResponse
+     * @throws exceptions\ZohoCrmResponseError
      */
     public function getFields()
     {
@@ -644,7 +674,9 @@ class EZohoCrm
      * You can use the getModules method to get the list of modules in your CRM account.
      * @link https://www.zoho.com/crm/help/api/getmodules.html
      * @return mixed
-     * @throws \Exception
+     * @throws exceptions\ZohoCrmInvalidJson
+     * @throws exceptions\ZohoCrmInvalidResponse
+     * @throws exceptions\ZohoCrmResponseError
      */
     public function getModules()
     {
@@ -697,7 +729,9 @@ class EZohoCrm
      * @param boolean $excludeNull
      * @param integer $version
      * @return mixed
-     * @throws \Exception
+     * @throws exceptions\ZohoCrmInvalidJson
+     * @throws exceptions\ZohoCrmInvalidResponse
+     * @throws exceptions\ZohoCrmResponseError
      */
     public function getRecordById($id, $excludeNull = false, $version = self::VERSION)
     {
@@ -725,7 +759,9 @@ class EZohoCrm
      * @param integer $version
      * @param boolean $myRecords
      * @return mixed
-     * @throws \Exception
+     * @throws exceptions\ZohoCrmInvalidJson
+     * @throws exceptions\ZohoCrmInvalidResponse
+     * @throws exceptions\ZohoCrmResponseError
      */
     public function getRecords(
         $columns = array(),
@@ -829,17 +865,17 @@ class EZohoCrm
      * @param integer $fromIndex
      * @param integer $toIndex
      * @return mixed
-     * @throws \Exception
+     * @throws exceptions\ModuleNotSupported
+     * @throws exceptions\ZohoCrmInvalidJson
+     * @throws exceptions\ZohoCrmInvalidResponse
+     * @throws exceptions\ZohoCrmResponseError
      */
     public function getRelatedRecords($parentModule, $id, $excludeNull = false, $fromIndex = 1, $toIndex = 20)
     {
         $nonSupportedModules = array(static::MODULE_EMAILS, static::MODULE_COMPETITORS, static::MODULE_INTEGRATIONS);
 
         if (in_array($this->module, $nonSupportedModules)) {
-            throw new EZohoCrmException(
-                "Module $this->module not supported for this function.",
-                EZohoCrmException::MODULE_NOT_SUPPORTED
-            );
+            throw new exceptions\ModuleNotSupported("Module $this->module not supported for this function.");
         }
 
         $path = $this->getPath(__FUNCTION__);
@@ -865,7 +901,9 @@ class EZohoCrm
      * @param integer $toIndex
      * @param integer $version
      * @return mixed
-     * @throws \Exception
+     * @throws exceptions\ZohoCrmInvalidJson
+     * @throws exceptions\ZohoCrmInvalidResponse
+     * @throws exceptions\ZohoCrmResponseError
      * @deprecated
      */
     public function getSearchRecords(
@@ -900,7 +938,9 @@ class EZohoCrm
      * @param integer $toIndex
      * @param null|string $lastModifiedTime
      * @return mixed
-     * @throws \Exception
+     * @throws exceptions\ZohoCrmInvalidJson
+     * @throws exceptions\ZohoCrmInvalidResponse
+     * @throws exceptions\ZohoCrmResponseError
      */
     public function searchRecords(
         $selectColumns,
@@ -935,7 +975,9 @@ class EZohoCrm
      * @param boolean $excludeNull
      * @param integer $version
      * @return mixed
-     * @throws \Exception
+     * @throws exceptions\ZohoCrmInvalidJson
+     * @throws exceptions\ZohoCrmInvalidResponse
+     * @throws exceptions\ZohoCrmResponseError
      */
     public function getSearchRecordsByPDC(
         $selectColumns,
@@ -963,7 +1005,9 @@ class EZohoCrm
      * @param $type
      * @param boolean $excludeNull
      * @return mixed
-     * @throws \Exception
+     * @throws exceptions\ZohoCrmInvalidJson
+     * @throws exceptions\ZohoCrmInvalidResponse
+     * @throws exceptions\ZohoCrmResponseError
      */
     public function getUsers($type, $excludeNull = false)
     {
@@ -982,7 +1026,9 @@ class EZohoCrm
      * @link https://www.zoho.com/crm/help/api/downloadfile.html
      * @param $id
      * @return mixed
-     * @throws \Exception
+     * @throws exceptions\ZohoCrmInvalidJson
+     * @throws exceptions\ZohoCrmInvalidResponse
+     * @throws exceptions\ZohoCrmResponseError
      */
     public function downloadFile($id)
     {
@@ -1003,7 +1049,11 @@ class EZohoCrm
      * @param boolean $excludeNull
      * @param integer $version
      * @return mixed
-     * @throws \Exception
+     * @throws exceptions\ModuleNotSupported
+     * @throws exceptions\RecordsInsertUpdateLimit
+     * @throws exceptions\ZohoCrmInvalidJson
+     * @throws exceptions\ZohoCrmInvalidResponse
+     * @throws exceptions\ZohoCrmResponseError
      */
     public function insertRecords(
         $records,
@@ -1039,7 +1089,11 @@ class EZohoCrm
      * @param boolean $excludeNull
      * @param integer $version
      * @return mixed
-     * @throws \Exception
+     * @throws exceptions\ModuleNotSupported
+     * @throws exceptions\RecordsInsertUpdateLimit
+     * @throws exceptions\ZohoCrmInvalidJson
+     * @throws exceptions\ZohoCrmInvalidResponse
+     * @throws exceptions\ZohoCrmResponseError
      */
     public function updateRecords($id, $records, $wfTrigger = false, $excludeNull = false, $version = self::VERSION)
     {
@@ -1064,8 +1118,12 @@ class EZohoCrm
      * @param $relatedModule
      * @param $id
      * @param $records
-     * @return mixed|null
-     * @throws \Exception
+     * @return mixed
+     * @throws exceptions\ModuleNotSupported
+     * @throws exceptions\RecordsInsertUpdateLimit
+     * @throws exceptions\ZohoCrmInvalidJson
+     * @throws exceptions\ZohoCrmInvalidResponse
+     * @throws exceptions\ZohoCrmResponseError
      */
     public function updateRelatedRecords($relatedModule, $id, $records)
     {
@@ -1087,7 +1145,9 @@ class EZohoCrm
      * @param $records
      * @param $method
      * @return string
-     * @throws \Exception
+     * @throws exceptions\ModuleNotSupported
+     * @throws exceptions\RecordsInsertUpdateLimit
+     * @throws exceptions\UnknownHttpMethod
      */
     public function transformRecordsToXmlData($records, $method)
     {
@@ -1099,17 +1159,13 @@ class EZohoCrm
         );
 
         if (count($records) > 1 && in_array($this->module, $modulesNotSupportedForMultipleInserts)) {
-            throw new EZohoCrmException(
-                "Module $this->module does not support multiple inserts.",
-                EZohoCrmException::MODULE_NOT_SUPPORTED
-            );
+            throw new exceptions\ModuleNotSupported("Module $this->module does not support multiple inserts.");
         }
 
         if (count($records) > static::MAX_RECORDS_INSERT_UPDATE) {
-            throw new EZohoCrmException(
+            throw new exceptions\RecordsInsertUpdateLimit(
                 'Only the first ' . static::MAX_RECORDS_INSERT_UPDATE .
-                ' records will be considered when inserting multiple records.',
-                EZohoCrmException::RECORDS_INSERT_UPDATE_LIMIT
+                ' records will be considered when inserting multiple records.'
             );
         }
 
@@ -1133,7 +1189,7 @@ class EZohoCrm
      * @param $value
      * @param $method
      * @return string
-     * @throws EZohoCrmException
+     * @throws exceptions\UnknownHttpMethod
      */
     protected static function getEscapedValue($value, $method)
     {
@@ -1145,10 +1201,7 @@ class EZohoCrm
                 $value = '<![CDATA[' . $value . ']]>';
                 break;
             default:
-                throw new EZohoCrmException(
-                    "Unknown HTTP request method $method.",
-                    EZohoCrmException::UNKNOWN_HTTP_METHOD
-                );
+                throw new exceptions\UnknownHttpMethod("Unknown HTTP request method $method.");
         }
 
         return $value;
@@ -1170,7 +1223,7 @@ class EZohoCrm
      * updateRecords.
      * @param mixed $response response from Zoho CRM API
      * @param array $records array of records which were sent to Zoho CRM API
-     * @throws EZohoCrmException
+     * @throws exceptions\ZohoCrmResponseError
      */
     public static function checkResponseOnMultipleRecordsRequest($response, $records)
     {
@@ -1181,10 +1234,9 @@ class EZohoCrm
             }
         }
         if (!empty($errorMessage)) {
-            throw new EZohoCrmException(
+            throw new exceptions\ZohoCrmResponseError(
                 $errorMessage . "\nUri was \"{$response->response->uri}\".\n" . "Records data:\n" .
-                EUtils::printVarDump($records, true),
-                EZohoCrmException::ZOHO_CRM_RESPONSE_ERROR
+                EUtils::printVarDump($records, true)
             );
         }
     }
@@ -1192,8 +1244,7 @@ class EZohoCrm
     /**
      * Order of rows in response of Zoho CRM API may differ from order of rows in request, this method fixes it.
      * @param mixed $response response from Zoho CRM API
-     * @return mixed $response response from Zoho CRM API with reordered rows.
-     * @throws EZohoCrmException
+     * @return mixed response from Zoho CRM API with reordered rows.
      */
     public static function fixOrderInResponseOnMultipleRecordsRequest($response)
     {
@@ -1214,6 +1265,7 @@ class EZohoCrm
      * with many items, this methods makes response unified.
      * @param $response
      * @return mixed
+     * @throws \Exception
      */
     protected function rowToArray($response)
     {
@@ -1235,8 +1287,8 @@ class EZohoCrm
      * Get value of field of row in response on multiple records request.
      * @param \stdClass $row row in response on multiple records request
      * @param string $fieldName field name
-     * @throws \Exception
      * @return mixed field value
+     * @throws \Exception
      */
     public static function getRowFieldValue($row, $fieldName)
     {
@@ -1252,7 +1304,7 @@ class EZohoCrm
     /**
      * @param null|string $module
      * @return string
-     * @throws EZohoCrmException
+     * @throws exceptions\ModuleNotSupported
      */
     public function getSystemIdFieldName($module = null)
     {
@@ -1260,7 +1312,7 @@ class EZohoCrm
             $module = $this->module;
         }
         if (empty($module)) {
-            throw new EZohoCrmException("Module name can't be empty.", EZohoCrmException::MODULE_NOT_SUPPORTED);
+            throw new exceptions\ModuleNotSupported("Module name can't be empty.");
         }
 
         return strtoupper($module) . '_ID';
