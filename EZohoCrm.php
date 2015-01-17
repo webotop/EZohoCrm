@@ -17,8 +17,6 @@
  * Extension was improved by
  * @author: Dmitry Kulikov <kulikovdn@gmail.com>
  *
- * TODO use classes of exceptions instead of error codes
- *
  * TODO need to improve error handling, checkResponseOnMultipleRecordsRequest and
  * TODO fixOrderInResponseOnMultipleRecordsRequest must be executed automatically
  *
