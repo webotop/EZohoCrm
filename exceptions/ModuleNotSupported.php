@@ -24,6 +24,6 @@ namespace ext\EZohoCrm\exceptions;
  * ModuleNotSupported is class of exceptions for cases
  * when module does not support action or option.
  */
-class ModuleNotSupported extends \CException
+class ModuleNotSupported extends ZohoCrmException
 {
 }

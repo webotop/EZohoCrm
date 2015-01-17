@@ -24,6 +24,6 @@ namespace ext\EZohoCrm\exceptions;
  * ZohoCrmInvalidResponse is class of exceptions for cases
  * when response from Zoho CRM API is invalid.
  */
-class ZohoCrmInvalidResponse extends \CException
+class ZohoCrmInvalidResponse extends ZohoCrmException
 {
 }

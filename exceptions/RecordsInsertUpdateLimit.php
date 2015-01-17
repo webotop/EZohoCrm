@@ -24,6 +24,6 @@ namespace ext\EZohoCrm\exceptions;
  * RecordsInsertUpdateLimit is class of exceptions for cases
  * when number of records to insert / update in one request exceeds Zoho CRM API limits.
  */
-class RecordsInsertUpdateLimit extends \CException
+class RecordsInsertUpdateLimit extends ZohoCrmException
 {
 }
