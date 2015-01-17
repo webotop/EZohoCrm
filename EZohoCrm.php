@@ -220,11 +220,11 @@ class EZohoCrm
     /**
      * @param $path
      * @param string $method
-     * @param null $getParameters
-     * @param null $postParameters
+     * @param null|array $getParameters
+     * @param null|array $postParameters
      * @param null $postBody
      * @param null $bodyEncodingType
-     * @param bool $rawFile
+     * @param boolean $rawFile
      * @return mixed
      * @throws exceptions\ZohoCrmInvalidJson
      * @throws exceptions\ZohoCrmInvalidResponse
