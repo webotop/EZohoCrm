@@ -170,7 +170,20 @@ class EZohoCrm
      * Option for a cURL transfer.
      * @var array
      */
-    public $curlOptions = array();
+    public $curlOptions = array(
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_FAILONERROR => false,
+        CURLOPT_SSL_VERIFYPEER => true,
+        /**
+         * Please everyone, stop setting CURLOPT_SSL_VERIFYPEER to false or 0. If your PHP installation does not
+         * have an up-to-date CA root certificate bundle, download the one at the curl website
+         * and save it on your server: http://curl.haxx.se/docs/caextract.html
+         * Then set a path to it in your php.ini file, e.g. on Windows:
+         *     curl.cainfo=c:\php\cacert.pem
+         * Turning off CURLOPT_SSL_VERIFYPEER allows man in the middle (MITM) attacks, which you don't want!
+         */
+        CURLOPT_SSL_CIPHER_LIST => 'TLSv1.2+HIGH:!aNULL:!eNULL',
+    );
 
     /**
      * Callback function which will be executed before sending of request to Zoho CRM API; callback will receive
@@ -194,22 +207,6 @@ class EZohoCrm
      */
     public function __construct($configArray = null)
     {
-        // default curl options
-        $this->curlOptions = array(
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_FAILONERROR => false,
-            CURLOPT_SSL_VERIFYPEER => true,
-            /**
-             * Please everyone, stop setting CURLOPT_SSL_VERIFYPEER to false or 0. If your PHP installation does not
-             * have an up-to-date CA root certificate bundle, download the one at the curl website
-             * and save it on your server: http://curl.haxx.se/docs/caextract.html
-             * Then set a path to it in your php.ini file, e.g. on Windows:
-             *     curl.cainfo=c:\php\cacert.pem
-             * Turning off CURLOPT_SSL_VERIFYPEER allows man in the middle (MITM) attacks, which you don't want!
-             */
-            CURLOPT_SSL_CIPHER_LIST => 'TLSv1+HIGH:!SSLv2:!aNULL:!eNULL',
-        );
-
         if (!empty($configArray)) {
             foreach ($configArray as $key => $value) {
                 $this->$key = $value;
