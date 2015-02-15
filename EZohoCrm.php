@@ -1061,7 +1061,7 @@ class EZohoCrm
         $path = $this->getPath(__FUNCTION__);
 
         $getParameters = array(
-            'wfTrigger' => (string)$wfTrigger,
+            'wfTrigger' => static::getBoolean($wfTrigger),
             'isApproval' => (string)$isApproval,
             'excludeNull' => $excludeNull,
             'version' => $version,
@@ -1096,7 +1096,7 @@ class EZohoCrm
 
         $getParameters = array(
             'id' => (string)$id,
-            'wfTrigger' => (string)$wfTrigger,
+            'wfTrigger' => static::getBoolean($wfTrigger),
             'excludeNull' => $excludeNull,
             'version' => $version,
         );
