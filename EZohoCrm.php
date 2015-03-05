@@ -337,18 +337,21 @@ class EZohoCrm
      */
     protected function requestRecursive($client)
     {
+        $this->attemptsCount++;
         try {
-            $this->attemptsCount++;
             $response = $client->request();
         } catch (\EHttpClientException $e) {
-            if ($this->maxAttempts == 1 || strpos(strtolower($e->getMessage()), 'timed out') === false) {
+            $message = strtolower($e->getMessage());
+            if ($this->maxAttempts == 1
+                || (strpos($message, 'timed out') === false && strpos($message, 'timeout') === false)
+            ) {
                 // repeating of requests disabled or not timed out error
                 throw $e;
             }
             \Yii::log(
                 "exception 'EHttpClientException' with message '{$e->getMessage()}'" .
                 " in {$e->getFile()}:{$e->getLine()}\nStack trace:\n" . $e->getTraceAsString(),
-                'error',
+                'warning',
                 'exception.EHttpClientException'
             );
             if ($this->attemptsCount < $this->maxAttempts) {
