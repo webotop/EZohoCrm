@@ -21,7 +21,8 @@
 namespace ext\EZohoCrm;
 
 /**
- * EUtils contains useful functions which don't relate with Zoho CRM API or Yii directly.
+ * Class EUtils contains useful functions which don't relate with Zoho CRM API or Yii directly.
+ * @package ext\EZohoCrm
  */
 class EUtils
 {

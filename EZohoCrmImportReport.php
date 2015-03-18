@@ -18,13 +18,13 @@
  * @author: Dmitry Kulikov <kulikovdn@gmail.com>
  */
 
-namespace ext\EZohoCrm\exceptions;
+namespace ext\EZohoCrm;
 
 /**
- * Class ZohoCrmResponseError is class of exceptions for cases
- * when response from Zoho CRM API contains error message.
- * @package ext\EZohoCrm\exceptions
+ * Class EZohoCrmImportReport serves for building of reports about import of data from Zoho CRM.
+ * @package ext\EZohoCrm
  */
-class ZohoCrmResponseError extends EZohoCrmException
+class EZohoCrmImportReport
 {
+    public static $report;
 }

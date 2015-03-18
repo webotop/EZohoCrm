@@ -21,9 +21,10 @@
 namespace ext\EZohoCrm\exceptions;
 
 /**
- * ZohoCrmInvalidJson is class of exceptions for cases
+ * Class ZohoCrmInvalidJson is class of exceptions for cases
  * when JSON in response from Zoho CRM API can't be parsed.
+ * @package ext\EZohoCrm\exceptions
  */
-class ZohoCrmInvalidJson extends ZohoCrmException
+class ZohoCrmInvalidJson extends EZohoCrmException
 {
 }

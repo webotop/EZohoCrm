@@ -21,9 +21,10 @@
 namespace ext\EZohoCrm\exceptions;
 
 /**
- * RetryAttemptsLimit is class of exceptions for cases
+ * Class RetryAttemptsLimit is class of exceptions for cases
  * when maximum number of attempts to send request was exceeded.
+ * @package ext\EZohoCrm\exceptions
  */
-class RetryAttemptsLimit extends ZohoCrmException
+class RetryAttemptsLimit extends EZohoCrmException
 {
 }

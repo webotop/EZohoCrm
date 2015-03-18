@@ -21,10 +21,9 @@
 namespace ext\EZohoCrm\exceptions;
 
 /**
- * Class ZohoCrmResponseError is class of exceptions for cases
- * when response from Zoho CRM API contains error message.
+ * Class EZohoCrmException is base class for all exceptions of this extension.
  * @package ext\EZohoCrm\exceptions
  */
-class ZohoCrmResponseError extends EZohoCrmException
+class EZohoCrmException extends \CException
 {
 }

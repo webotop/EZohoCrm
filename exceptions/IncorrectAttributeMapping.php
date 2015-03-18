@@ -21,10 +21,10 @@
 namespace ext\EZohoCrm\exceptions;
 
 /**
- * Class ZohoCrmResponseError is class of exceptions for cases
- * when response from Zoho CRM API contains error message.
+ * Class IncorrectAttributeMapping is class of exceptions for cases
+ * when incorrect mapping specified for attribute.
  * @package ext\EZohoCrm\exceptions
  */
-class ZohoCrmResponseError extends EZohoCrmException
+class IncorrectAttributeMapping extends EZohoCrmException
 {
 }

@@ -21,9 +21,10 @@
 namespace ext\EZohoCrm\exceptions;
 
 /**
- * UnknownHttpMethod is class of exceptions for cases
+ * Class UnknownHttpMethod is class of exceptions for cases
  * when unknown HTTP request method was specified.
+ * @package ext\EZohoCrm\exceptions
  */
-class UnknownHttpMethod extends ZohoCrmException
+class UnknownHttpMethod extends EZohoCrmException
 {
 }

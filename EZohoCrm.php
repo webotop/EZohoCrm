@@ -37,7 +37,9 @@
 namespace ext\EZohoCrm;
 
 /**
- * EZohoCrm is main class of extension. It is good idea to create in your project class ZohoCrm extending this class.
+ * Class EZohoCrm is main class of extension.
+ * It is good idea to create in your project class ZohoCrm extending this class.
+ * @package ext\EZohoCrm
  */
 class EZohoCrm
 {
@@ -313,7 +315,7 @@ class EZohoCrm
             \Yii::log(
                 "Sending of request to Zoho CRM API:\n" . EUtils::printVarDump($client, true),
                 'info',
-                'ext.eZohoCrm'
+                'ext.EZohoCrm'
             );
         }
 
@@ -416,7 +418,7 @@ class EZohoCrm
                 "Setting raw POST data for a request will override any POST parameters or file uploads.\n" .
                 EUtils::printVarDump($client, true),
                 'warning',
-                'ext.eZohoCrm'
+                'ext.EZohoCrm'
             );
         }
     }
@@ -1313,6 +1315,54 @@ class EZohoCrm
             throw new exceptions\ModuleNotSupported("Module name can't be empty.");
         }
 
-        return strtoupper($module) . '_ID';
+        $modulesSystemIds = array(
+            static::MODULE_ACCOUNTS => 'ACCOUNTID',
+            static::MODULE_CALLS => 'CALLID',
+            static::MODULE_CAMPAIGNS => 'CAMPAIGNID',
+            static::MODULE_CASES => 'CASEID',
+            static::MODULE_COMPETITORS => 'COMPETITORID',
+            static::MODULE_CONTACTS => 'CONTACTID',
+            static::MODULE_DASHBOARDS => 'DASHBOARDID',
+            static::MODULE_EMAILS => 'EMAILID',
+            static::MODULE_EVENTS => 'EVENTID',
+            static::MODULE_FORECASTS => 'FORECASTID',
+            static::MODULE_INFO => 'INFOID',
+            static::MODULE_INTEGRATIONS => 'INTEGRATIONID',
+            static::MODULE_INVOICES => 'INVOICEID',
+            static::MODULE_LEADS => 'LEADID',
+            static::MODULE_POTENTIALS => 'POTENTIALID',
+            static::MODULE_PRICE_BOOKS => 'BOOKID',
+            static::MODULE_PRODUCTS => 'PRODUCTID',
+            static::MODULE_PURCHASE_ORDERS => 'PURCHASEORDERID',
+            static::MODULE_QUOTES => 'QUOTEID',
+            static::MODULE_REPORTS => 'REPORTID',
+            static::MODULE_SALES_ORDERS => 'SALESORDERID',
+            static::MODULE_SOLUTIONS => 'SOLUTIONID',
+            static::MODULE_TASKS => 'ACTIVITYID',
+            static::MODULE_USERS => 'USERID',
+            static::MODULE_VENDORS => 'VENDORID',
+        );
+        if (array_key_exists($module, $modulesSystemIds)) {
+            // system module
+            return $modulesSystemIds[$module];
+        } else {
+            // custom module
+            return strtoupper($module) . '_ID';
+        }
+    }
+
+    /**
+     * Convert object representing Zoho CRM record to array.
+     * @param \stdClass $row record from Zoho CRM
+     * @return array array containing field names and values of record from Zoho CRM.
+     */
+    public static function zohoCrmRowToArray($row)
+    {
+        $data = array();
+        foreach ($row->FL as $field) {
+            $data[$field->val] = $field->content;
+        }
+
+        return $data;
     }
 }
