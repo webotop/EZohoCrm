@@ -280,7 +280,7 @@ class EZohoCrmModuleBehavior extends \CActiveRecordBehavior
 
                 break;
             case static::ZOHO_CRM_AR_MAP_DIRECTION:
-                return $mapping = $this->attributes;
+                $mapping = $this->attributes;
 
                 break;
             default:
