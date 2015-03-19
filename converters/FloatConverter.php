@@ -21,14 +21,13 @@
 namespace ext\EZohoCrm\converters;
 
 use ext\EZohoCrm\behaviors\EZohoCrmModuleBehavior;
-use ext\EZohoCrm\EUtils;
 use ext\EZohoCrm\exceptions\IncorrectAttributeMapping;
 
 /**
  * Class FloatConverter converts values for floating point number field in Zoho CRM.
  * @package ext\EZohoCrm\converters
  */
-class FloatConverter extends EZohoCrmDataConverter
+class FloatConverter extends NumericConverter
 {
     /**
      * Convert data from one representation to another.
@@ -43,22 +42,7 @@ class FloatConverter extends EZohoCrmDataConverter
 
         // type transformation for ZOHO_CRM_AR_MAP_DIRECTION
         if ($direction == EZohoCrmModuleBehavior::ZOHO_CRM_AR_MAP_DIRECTION) {
-            if (EUtils::get($this->attributeMapping, 'zohoCrm-ar-nullToZero')
-                && EUtils::get($this->attributeMapping, 'zohoCrm-ar-zeroToNull')
-            ) {
-                throw new IncorrectAttributeMapping(
-                    "zohoCrm-ar-nullToZero and zohoCrm-ar-zeroToNull can't be true both, attribute mapping:\n" .
-                    EUtils::printVarDump($this->attributeMapping, true)
-                );
-            }
-
-            if (EUtils::get($this->attributeMapping, 'zohoCrm-ar-nullToZero') && $value == null) {
-                return 0;
-            }
-
-            if (EUtils::get($this->attributeMapping, 'zohoCrm-ar-zeroToNull') && $value == 0) {
-                return null;
-            }
+            $value = $this->applyNullZeroRules($value);
 
             if (!isset($value)) {
                 return $value;

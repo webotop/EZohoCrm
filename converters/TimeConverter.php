@@ -23,10 +23,10 @@ namespace ext\EZohoCrm\converters;
 use ext\EZohoCrm\behaviors\EZohoCrmModuleBehavior;
 
 /**
- * Class TimeConverter
+ * Class TimeConverter converts values for time field in Zoho CRM.
  * @package ext\EZohoCrm\converters
  */
-class TimeConverter extends EZohoCrmDataConverter
+class TimeConverter extends DateTimeConverter
 {
     /**
      * Convert data from one representation to another.
@@ -52,68 +52,15 @@ class TimeConverter extends EZohoCrmDataConverter
         } else {
             $arTimeFormats = array('HH:mm:ss');
         }
-        $dateTimeParserDefaults = array('hour' => 0, 'minute' => 0, 'second' => 0);
 
         // type transformation for ZOHO_CRM_AR_MAP_DIRECTION
         if ($direction == EZohoCrmModuleBehavior::ZOHO_CRM_AR_MAP_DIRECTION) {
-            $timestamp = false;
-            foreach ($zohoCrmTimeFormats as $timeFormat) {
-                $timestamp = \CDateTimeParser::parse($value, $timeFormat, $dateTimeParserDefaults);
-                if ($timestamp === false && array_key_exists('zohoCrmDefaultMeridiem', $this->attributeMapping)
-                    && strpos($timeFormat, 'a') !== false
-                ) {
-                    $timestamp = \CDateTimeParser::parse(
-                        $value . ' ' . $this->attributeMapping['zohoCrmDefaultMeridiem'],
-                        $timeFormat,
-                        $dateTimeParserDefaults
-                    );
-                }
-                if ($timestamp !== false) {
-                    break;
-                }
-            }
-            if ($timestamp === false) {
-                \Yii::log(
-                    'Can\'t parse time "' . $value . '", value will be set to NULL, direction of conversion "' .
-                    $direction . '".',
-                    'error',
-                    'ext.EZohoCrm'
-                );
-                $value = null;
-            } else {
-                $value = \Yii::app()->dateFormatter->format(reset($arTimeFormats), $timestamp);
-            }
+            $value = $this->convertDateTime($value, $zohoCrmTimeFormats, reset($arTimeFormats), $direction);
         }
 
         // type transformation for AR_ZOHO_CRM_MAP_DIRECTION
         if ($direction == EZohoCrmModuleBehavior::AR_ZOHO_CRM_MAP_DIRECTION) {
-            $timestamp = false;
-            foreach ($arTimeFormats as $timeFormat) {
-                $timestamp = \CDateTimeParser::parse($value, $timeFormat, $dateTimeParserDefaults);
-                if ($timestamp === false && array_key_exists('arDefaultMeridiem', $this->attributeMapping)
-                    && strpos($timeFormat, 'a') !== false
-                ) {
-                    $timestamp = \CDateTimeParser::parse(
-                        $value . ' ' . $this->attributeMapping['arDefaultMeridiem'],
-                        $timeFormat,
-                        $dateTimeParserDefaults
-                    );
-                }
-                if ($timestamp !== false) {
-                    break;
-                }
-            }
-            if ($timestamp === false) {
-                \Yii::log(
-                    'Can\'t parse time "' . $value . '", value will be set to NULL, direction of conversion "' .
-                    $direction . '".',
-                    'error',
-                    'ext.EZohoCrm'
-                );
-                $value = null;
-            } else {
-                $value = \Yii::app()->dateFormatter->format(reset($zohoCrmTimeFormats), $timestamp);
-            }
+            $value = $this->convertDateTime($value, $arTimeFormats, reset($zohoCrmTimeFormats), $direction);
         }
 
         return $value;

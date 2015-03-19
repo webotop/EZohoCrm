@@ -222,12 +222,7 @@ class EZohoCrmModuleBehavior extends \CActiveRecordBehavior
 
         if (!$runValidation || $model->validate()) {
             if (!$model->save(false)) {
-                \Yii::log(
-                    "Can't save " . get_class($model) . " model. Attributes:\n" .
-                    EUtils::printVarDump($model->attributes, true),
-                    'error',
-                    'ext.EZohoCrm'
-                );
+                $this->owner->logSavingError($model);
             }
         } else {
             if ($saveInvalid) {
@@ -246,14 +241,23 @@ class EZohoCrmModuleBehavior extends \CActiveRecordBehavior
                 'ext.EZohoCrm'
             );
             if ($saveInvalid && !$model->save(false)) {
-                \Yii::log(
-                    "Can't save " . get_class($model) . " model. Attributes:\n" .
-                    EUtils::printVarDump($model->attributes, true),
-                    'error',
-                    'ext.EZohoCrm'
-                );
+                $this->owner->logSavingError($model);
             }
         }
+    }
+
+    /**
+     * Log information about failed saving.
+     * @param \CActiveRecord $model active record model for which saving failed
+     */
+    protected function logSavingError($model)
+    {
+        \Yii::log(
+            "Can't save " . get_class($model) . " model. Attributes:\n" .
+            EUtils::printVarDump($model->attributes, true),
+            'error',
+            'ext.EZohoCrm'
+        );
     }
 
     /**
