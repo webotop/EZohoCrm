@@ -20,7 +20,8 @@
 
 namespace ext\EZohoCrm\converters;
 
-use ext\EZohoCrm\exceptions\NotImplemented;
+use ext\EZohoCrm\behaviors\EZohoCrmModuleBehavior;
+use ext\EZohoCrm\EUtils;
 
 /**
  * Class DateTimeConverter converts values for datetime field in Zoho CRM.
@@ -29,15 +30,52 @@ use ext\EZohoCrm\exceptions\NotImplemented;
 class DateTimeConverter extends EZohoCrmDataConverter
 {
     /**
+     * @var array array of default datetime formats which should be used for Zoho CRM
+     */
+    public $defaultZohoCrmDateTimeFormats = array('y-MM-dd HH:mm:ss');
+
+    /**
+     * @var array array of default datetime formats which should be used for active record model
+     */
+    public $defaultArDateTimeFormats = array('y-MM-dd HH:mm:ss');
+
+    /**
      * Convert data from one representation to another.
      * @param mixed $value value which should be converted
      * @param string $direction direction of conversion
      * @return mixed converted value.
-     * @throws NotImplemented
      */
     public function convert($value, $direction)
     {
-        throw new NotImplemented();
+        $value = parent::convert($value, $direction);
+
+        if (!isset($value)) {
+            return $value;
+        }
+
+        $zohoCrmDateTimeFormats = EUtils::get(
+            $this->attributeMapping,
+            'zohoCrmDateTimeFormats',
+            $this->defaultZohoCrmDateTimeFormats
+        );
+
+        $arDateTimeFormats = EUtils::get(
+            $this->attributeMapping,
+            'arDateTimeFormats',
+            $this->defaultArDateTimeFormats
+        );
+
+        // type transformation for ZOHO_CRM_AR_MAP_DIRECTION
+        if ($direction == EZohoCrmModuleBehavior::ZOHO_CRM_AR_MAP_DIRECTION) {
+            $value = $this->convertDateTime($value, $zohoCrmDateTimeFormats, reset($arDateTimeFormats), $direction);
+        }
+
+        // type transformation for AR_ZOHO_CRM_MAP_DIRECTION
+        if ($direction == EZohoCrmModuleBehavior::AR_ZOHO_CRM_MAP_DIRECTION) {
+            $value = $this->convertDateTime($value, $arDateTimeFormats, reset($zohoCrmDateTimeFormats), $direction);
+        }
+
+        return $value;
     }
 
     /**

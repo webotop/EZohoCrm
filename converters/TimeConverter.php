@@ -20,8 +20,6 @@
 
 namespace ext\EZohoCrm\converters;
 
-use ext\EZohoCrm\behaviors\EZohoCrmModuleBehavior;
-
 /**
  * Class TimeConverter converts values for time field in Zoho CRM.
  * @package ext\EZohoCrm\converters
@@ -29,40 +27,12 @@ use ext\EZohoCrm\behaviors\EZohoCrmModuleBehavior;
 class TimeConverter extends DateTimeConverter
 {
     /**
-     * Convert data from one representation to another.
-     * @param mixed $value value which should be converted
-     * @param string $direction direction of conversion
-     * @return mixed converted value.
+     * @var array array of default datetime formats which should be used for Zoho CRM
      */
-    public function convert($value, $direction)
-    {
-        $value = parent::convert($value, $direction);
+    public $defaultZohoCrmDateTimeFormats = array('hh:mm:ss a', 'h:mm:ss a', 'HH:mm:ss', 'H:mm:ss');
 
-        if (!isset($value)) {
-            return $value;
-        }
-
-        if (array_key_exists('zohoCrmTimeFormats', $this->attributeMapping)) {
-            $zohoCrmTimeFormats = $this->attributeMapping['zohoCrmTimeFormats'];
-        } else {
-            $zohoCrmTimeFormats = array('hh:mm:ss a', 'h:mm:ss a', 'HH:mm:ss', 'H:mm:ss');
-        }
-        if (array_key_exists('arTimeFormats', $this->attributeMapping)) {
-            $arTimeFormats = $this->attributeMapping['arTimeFormats'];
-        } else {
-            $arTimeFormats = array('HH:mm:ss');
-        }
-
-        // type transformation for ZOHO_CRM_AR_MAP_DIRECTION
-        if ($direction == EZohoCrmModuleBehavior::ZOHO_CRM_AR_MAP_DIRECTION) {
-            $value = $this->convertDateTime($value, $zohoCrmTimeFormats, reset($arTimeFormats), $direction);
-        }
-
-        // type transformation for AR_ZOHO_CRM_MAP_DIRECTION
-        if ($direction == EZohoCrmModuleBehavior::AR_ZOHO_CRM_MAP_DIRECTION) {
-            $value = $this->convertDateTime($value, $arTimeFormats, reset($zohoCrmTimeFormats), $direction);
-        }
-
-        return $value;
-    }
+    /**
+     * @var array array of default datetime formats which should be used for active record model
+     */
+    public $defaultArDateTimeFormats = array('HH:mm:ss');
 }

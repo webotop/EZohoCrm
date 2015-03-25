@@ -45,7 +45,7 @@ use ext\EZohoCrm\converters\EZohoCrmDataConverterManager;
  *                 'AM Start Time' => array(
  *                     'am_start_time',
  *                     'type' => 'time',
- *                     'zohoCrmTimeFormats' => array(
+ *                     'zohoCrmDateTimeFormats' => array(
  *                         'hh:mm a',
  *                         'h:mm a',
  *                         'hh:mma',

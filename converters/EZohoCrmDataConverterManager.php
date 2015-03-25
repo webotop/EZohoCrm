@@ -49,6 +49,7 @@ class EZohoCrmDataConverterManager
             'boolean' => 'BooleanConverter',
             'boolDropDown' => 'BooleanDropDownConverter',
             'booleanDropDown' => 'BooleanDropDownConverter',
+            'datetime' => 'DateTimeConverter',
             'float' => 'FloatConverter',
             'int' => 'IntegerConverter',
             'integer' => 'IntegerConverter',
