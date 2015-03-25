@@ -217,7 +217,7 @@ class EZohoCrm
     }
 
     /**
-     * @param $path
+     * @param string $path
      * @param string $method
      * @param null|array $getParameters
      * @param null|array $postParameters
@@ -273,8 +273,8 @@ class EZohoCrm
     }
 
     /**
-     * @param $path
-     * @param $method
+     * @param string $path
+     * @param string $method
      * @param $getParameters
      * @param $postParameters
      * @param $postBody
