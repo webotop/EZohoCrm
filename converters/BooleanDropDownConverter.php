@@ -38,13 +38,17 @@ class BooleanDropDownConverter extends EZohoCrmDataConverter
     {
         $value = parent::convert($value, $direction);
 
+        if (isset($value)) {
+            $value = mb_strtolower($value);
+        }
+
         // type transformation for ZOHO_CRM_AR_MAP_DIRECTION
         if ($direction == EZohoCrmModuleBehavior::ZOHO_CRM_AR_MAP_DIRECTION) {
             switch ($value) {
-                case 'Yes':
+                case 'yes':
                     $value = 1;
                     break;
-                case 'No':
+                case 'no':
                     $value = 0;
                     break;
             }

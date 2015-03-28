@@ -38,6 +38,10 @@ class BooleanConverter extends EZohoCrmDataConverter
     {
         $value = parent::convert($value, $direction);
 
+        if (isset($value)) {
+            $value = mb_strtolower($value);
+        }
+
         // type transformation for ZOHO_CRM_AR_MAP_DIRECTION
         if ($direction == EZohoCrmModuleBehavior::ZOHO_CRM_AR_MAP_DIRECTION) {
             switch ($value) {
@@ -54,10 +58,10 @@ class BooleanConverter extends EZohoCrmDataConverter
         if ($direction == EZohoCrmModuleBehavior::AR_ZOHO_CRM_MAP_DIRECTION) {
             switch ($value) {
                 case 1:
-                    $value = 'true';
+                    $value = 'True';
                     break;
                 case 0:
-                    $value = 'false';
+                    $value = 'False';
                     break;
             }
         }
