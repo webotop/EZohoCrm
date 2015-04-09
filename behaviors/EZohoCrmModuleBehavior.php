@@ -60,7 +60,7 @@ use ext\EZohoCrm\converters\EZohoCrmDataConverterManager;
  *                 'AM Classes Possible' => array(
  *                     'am_classes_possible',
  *                     'type' => 'boolean',
- *                     'converter' => 'application\models\zohoCrm\converters\CustomBooleanDropDownConverter',
+ *                     'converter' => 'application\models\zohoCrm\converters\CustomBooleanConverter',
  *                 ),
  *             ),
  *         ),
