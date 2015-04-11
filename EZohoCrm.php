@@ -117,6 +117,39 @@ class EZohoCrm
     const USER_TYPE_DEACTIVE_USERS = 'DeactiveUsers';
 
     /**
+     * Error codes.
+     */
+    const ERROR_USE_AUTHTOKEN = '4000'; // Please use Authtoken, instead of API ticket and APIkey.
+    const ERROR_INTERNAL_SERVER_ERROR = '4500'; // Internal server error while processing this request.
+    const ERROR_INACTIVE_API_KEY = '4501'; // API Key is inactive.
+    const ERROR_MODULE_NOT_SUPPORTED = '4502'; // This module is not supported in your edition.
+    const ERROR_FIELD_MISSING = '4401'; // Mandatory field missing.
+    const ERROR_INCORRECT_API_PARAMETER = '4600';
+    // Incorrect API parameter or API parameter value. Also check the method name and/or spelling errors in the API url.
+    const ERROR_LIMIT_CALLS_RATE = '4820'; // API call cannot be completed as you have exceeded the "rate limit".
+    const ERROR_MISSING_PARAMETERS = '4831'; // Missing parameters error.
+    const ERROR_TEXT_FOR_INTEGER = '4832'; // Text value given for an Integer field.
+    const ERROR_INVALID_TICKET = '4834'; // Invalid ticket. Also check if ticket has expired.
+    const ERROR_XML_PARSING_ERROR = '4835'; // XML parsing error.
+    const ERROR_WRONG_API_KEY = '4890'; // Wrong API Key.
+    const ERROR_NO_PERMISSION_CONVERT_LEAD = '4487'; // No permission to convert lead.
+    const ERROR_NO_PERMISSION_API = '4001'; // No API permission.
+    const ERROR_NO_PERMISSION_MODULE = '401'; // No module permission.
+    const ERROR_NO_PERMISSION_CREATE_RECORD = '401.1'; // No permission to create a record.
+    const ERROR_NO_PERMISSION_EDIT_RECORD = '401.2'; // No permission to edit a record.
+    const ERROR_NO_PERMISSION_DELETE_RECORD = '401.3'; // No permission to delete a record.
+    const ERROR_ZOHO_CRM_DISABLED = '4101'; // Zoho CRM disabled.
+    const ERROR_NO_CRM_ACCOUNT = '4102'; // No CRM account.
+    const ERROR_NO_RECORD_WITH_ID = '4103'; // No record available with the specified record ID.
+    const ERROR_NO_RECORDS_IN_MODULE = '4422'; // No records available in the module.
+    const ERROR_SEARCH_PARAMETER = '4420'; // Wrong value for search parameter and/or search parameter value.
+    const ERROR_LIMIT_API_CALLS = '4421'; // Number of API calls exceeded.
+    const ERROR_LIMIT_RECORD_SEARCH = '4423'; // Exceeded record search limit.
+    const ERROR_LIMIT_FILE_SIZE = '4807'; // Exceeded file size limit.
+    const ERROR_FILE_TYPE = '4424'; // Invalid File Type.
+    const ERROR_LIMIT_STORAGE_SPACE = '4809'; // Exceeded storage space limit.
+
+    /**
      * An authentication token is required in order to be able to make use of the Zoho CRM API.
      * An authentication token can be obtained by using the generateAuthToken function inside this class
      * or by using the url https://accounts.zoho.com/apiauthtoken/create?SCOPE=ZohoCRM/crmapi while being
