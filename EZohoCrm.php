@@ -148,6 +148,7 @@ class EZohoCrm
     const ERROR_LIMIT_FILE_SIZE = '4807'; // Exceeded file size limit.
     const ERROR_FILE_TYPE = '4424'; // Invalid File Type.
     const ERROR_LIMIT_STORAGE_SPACE = '4809'; // Exceeded storage space limit.
+    const ERROR_ATTACHMENT_ID = '4811'; // Download failed, please check whether given attachment id is valid.
 
     /**
      * An authentication token is required in order to be able to make use of the Zoho CRM API.
