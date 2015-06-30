@@ -306,15 +306,21 @@ class EZohoCrmModuleBehavior extends \CActiveRecordBehavior
      */
     public function mapData($data, $direction)
     {
-        $mapping = $this->owner->getFieldsMapping($direction);
-        foreach ($data as $key => $value) {
-            if (array_key_exists($key, $mapping)) {
-                $data[$mapping[$key][0]] = EZohoCrmDataConverterManager::getConverter($mapping[$key])
-                    ->convert($value, $direction);
+        $mappedData = array();
+        foreach ($this->owner->getFieldsMapping($direction) as $attributeName => $attributeMapping) {
+            if (array_key_exists($attributeName, $data)) {
+                $mappedData[$attributeMapping[0]] = EZohoCrmDataConverterManager::getConverter($attributeMapping)
+                    ->convert($data[$attributeName], $direction);
+            } else {
+                \Yii::log(
+                    'Can\'t find attribute with name "' . $attributeName . '" during mapping of ' .
+                    get_class($this->owner) . ' model.',
+                    'warning',
+                    'ext.EZohoCrm'
+                );
             }
-            unset($data[$key]);
         }
 
-        return $data;
+        return $mappedData;
     }
 }
