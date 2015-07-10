@@ -1326,7 +1326,12 @@ class EZohoCrm
      */
     public static function getRowFieldValue($row, $fieldName)
     {
-        foreach ($row->FL as $field) {
+        if (is_array($row->FL)) {
+            $fields = $row->FL;
+        } else {
+            $fields = array($row->FL);
+        }
+        foreach ($fields as $field) {
             if ($field->val === $fieldName) {
                 return $field->content;
             }
