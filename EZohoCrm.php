@@ -239,7 +239,7 @@ class EZohoCrm
 
     /**
      * Constructor.
-     * @param null|array $configArray use it to override default values for variables
+     * @param null|array $configArray use it to override default values of properties
      */
     public function __construct($configArray = null)
     {
